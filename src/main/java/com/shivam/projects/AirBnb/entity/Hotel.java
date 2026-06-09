@@ -27,7 +27,7 @@ public class Hotel {
     private String[] photos;
 
     @Column(columnDefinition = "TEXT[]")
-    private String amenities;
+    private String[] amenities;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -40,4 +40,7 @@ public class Hotel {
 
     @Column(nullable = false)
     private Boolean active;
+
+    @ManyToOne
+    private User owner;
 }
