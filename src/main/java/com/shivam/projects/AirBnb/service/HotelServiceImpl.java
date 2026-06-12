@@ -2,8 +2,10 @@ package com.shivam.projects.AirBnb.service;
 
 import com.shivam.projects.AirBnb.dto.HotelDto;
 import com.shivam.projects.AirBnb.entity.Hotel;
+import com.shivam.projects.AirBnb.entity.Room;
 import com.shivam.projects.AirBnb.exception.ResourceNotFoundException;
 import com.shivam.projects.AirBnb.repository.HotelRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -16,6 +18,7 @@ public class HotelServiceImpl implements HotelService{
 
     private final HotelRepository hotelRepository;
     private final ModelMapper modelMapper;
+    private final InventoryService inventoryService;
 
     @Override
     public HotelDto createNewHotel(HotelDto hotelDto) {
@@ -49,22 +52,31 @@ public class HotelServiceImpl implements HotelService{
     }
 
     @Override
+    @Transactional
     public void deleteHotelById(Long id) {
-        boolean exists= hotelRepository.existsById(id);
-        if(!exists) throw new ResourceNotFoundException("Hotel not found with ID: "+id);
+        Hotel hotel =hotelRepository
+                .findById(id)
+                .orElseThrow(()-> new ResourceNotFoundException("Hotel not found with ID : "+id));
 
         hotelRepository.deleteById(id);
-        //delete the future inventories for this hotel
+        for(Room room: hotel.getRooms()){
+            inventoryService.deleteFutureInventories(room);
+        }
 
     }
 
     @Override
+    @Transactional
     public void activateHotel(Long hotelId) {
         log.info("Activating the hotel with ID: {}", hotelId);
         Hotel hotel =hotelRepository
                 .findById(hotelId)
                 .orElseThrow(()-> new ResourceNotFoundException("Hotel not found with ID : "+hotelId));
         hotel.setActive(true);
-        //create inventory for all the rooms of this hotel
+
+        // assuming only do it once
+        for(Room room: hotel.getRooms()){
+            inventoryService.initializeRoomForAYear(room);
+        }
     }
 }
